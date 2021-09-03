@@ -1,39 +1,116 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (..)
-import Html.Attributes
-import Html.Events
+import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Input as Input
+import Html
 
 
-main : Program () Int Msg
+main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = 0
+        { init = { counter = 0, todos = [ "Todo 1", "Todo 2" ], inputFieldValue = "" }
         , view = view
         , update = update
         }
 
 
+type alias Model =
+    { counter : Int
+    , todos : List String
+    , inputFieldValue : String
+    }
+
+
 type Msg
     = Increase Int
     | Decrease
+    | OnChange String
+    | Add
+    | Delete Int
 
 
-update : Msg -> Int -> Int
+type Maybe2 a
+    = Just2 a
+    | Nothing2
+
+
+email : String
+email =
+    "a@a.com"
+
+
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         Increase value ->
-            model + value
+            { model | counter = model.counter + value }
 
         Decrease ->
-            model - 1
+            { model | counter = model.counter - 1 }
+
+        OnChange string ->
+            { model | inputFieldValue = string }
+
+        Add ->
+            { model | todos = model.inputFieldValue :: model.todos }
+
+        Delete position ->
+            { model | todos = model.todos }
 
 
-view : Int -> Html Msg
+buttonStyle : List (Attribute msg)
+buttonStyle =
+    [ Border.width 1
+    , Border.rounded 5
+    , Background.color <| rgba 1 1 0 0.2
+    , padding 5
+    ]
+
+
+view : Model -> Html.Html Msg
 view model =
-    div []
-        [ button [ Html.Events.onClick (Increase 20) ] [ text "Increase" ]
-        , p [] [ text (String.fromInt model) ]
-        , button [ Html.Events.onClick Decrease ] [ text "Decrease" ]
-        ]
+    layout [] <|
+        column
+            [ centerX, centerY, spacing 20 ]
+            [ row [ spacing 10 ]
+                [ Input.text []
+                    { label = Input.labelLeft [] <| text "Todo"
+                    , onChange = OnChange
+                    , placeholder = Nothing
+                    , text = model.inputFieldValue
+                    }
+                , Input.button buttonStyle
+                    { label = text "Add", onPress = Just Add }
+                ]
+            , column [ spacing 10 ]
+                (List.indexedMap
+                    (\index todo ->
+                        row [ spacing 10 ]
+                            [ text todo
+                            , Input.button buttonStyle
+                                { label = text "Delete", onPress = Just (Delete index) }
+                            ]
+                    )
+                    model.todos
+                )
+            , row [ spacing 10 ]
+                [ Input.button buttonStyle { label = text "+10", onPress = Just (Increase 10) }
+                , Input.button buttonStyle
+                    { label = text "+3", onPress = Just (Increase 3) }
+                , el [] (text <| String.fromInt model.counter)
+                , Input.button buttonStyle { label = text "-1", onPress = Just Decrease }
+                ]
+            ]
+
+
+
+-- div [ class "content" ]
+--     [ input [] []
+--     , node "style" [] [ text ".content {margin: 40px}" ]
+--     , button [ Html.Events.onClick (Increase 20) ] [ text "Increase" ]
+--     , p [] [ text (String.fromInt model.counter) ]
+--     , button [ Html.Events.onClick Decrease ] [ text "Decrease" ]
+--     ]
