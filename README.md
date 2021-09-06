@@ -2,19 +2,32 @@
 
 # Part 1
 
+* Elm introduction
+* Omni code base introduction
+
+# Part 2
+
 * Building an Elm app from scratch
 * Writing HTML in Elm
 * Moving to elm-go
 * Introduction to the Elm Architecture
 * Building a counter
 
-# Part 2
+# Part 3
 
 * Stepping up, building a TODO list
 * Introduction to elm-ui
+
+# Part 4
+
 * Subscriptions, responsiveness
 * Ports
 * Saving the state to the local storage
+
+# Part 5
+
+* Q&A
+* Going deeper in Omni (does it look more familiar now?)
 
 # Prerequisites
 
@@ -67,4 +80,23 @@ onEnter msg =
                     )
             )
         )
+```
+
+# Remove at
+
+From https://github.com/elm-community/list-extra/blob/8.4.0/src/List/Extra.elm#L920
+
+```
+removeAt : Int -> List a -> List a
+removeAt index l =
+    if index < 0 then
+        l
+
+    else
+        case List.drop index l of
+            [] ->
+                l
+
+            _ :: rest ->
+                List.take index l ++ rest
 ```

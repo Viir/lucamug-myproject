@@ -58,7 +58,21 @@ update msg model =
             { model | todos = model.inputFieldValue :: model.todos }
 
         Delete position ->
-            { model | todos = model.todos }
+            { model | todos = removeAt position model.todos }
+
+
+removeAt : Int -> List a -> List a
+removeAt index l =
+    if index < 0 then
+        l
+
+    else
+        case List.drop index l of
+            [] ->
+                l
+
+            _ :: rest ->
+                List.take index l ++ rest
 
 
 buttonStyle : List (Attribute msg)
