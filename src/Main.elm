@@ -6,6 +6,8 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Input as Input
 import Html
+import Html.Events
+import Json.Decode
 
 
 main : Program () Model Msg
@@ -55,7 +57,10 @@ update msg model =
             { model | inputFieldValue = string }
 
         Add ->
-            { model | todos = model.inputFieldValue :: model.todos }
+            { model
+                | todos = model.inputFieldValue :: model.todos
+                , inputFieldValue = ""
+            }
 
         Delete position ->
             { model | todos = removeAt position model.todos }
@@ -84,13 +89,30 @@ buttonStyle =
     ]
 
 
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+    htmlAttribute
+        (Html.Events.on "keyup"
+            (Json.Decode.field "key" Json.Decode.string
+                |> Json.Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Json.Decode.succeed msg
+
+                        else
+                            Json.Decode.fail "Not the enter key"
+                    )
+            )
+        )
+
+
 view : Model -> Html.Html Msg
 view model =
     layout [] <|
         column
             [ centerX, centerY, spacing 20 ]
             [ row [ spacing 10 ]
-                [ Input.text []
+                [ Input.text [ onEnter <| Add ]
                     { label = Input.labelLeft [] <| text "Todo"
                     , onChange = OnChange
                     , placeholder = Nothing
@@ -103,9 +125,9 @@ view model =
                 (List.indexedMap
                     (\index todo ->
                         row [ spacing 10 ]
-                            [ text todo
-                            , Input.button buttonStyle
+                            [ Input.button buttonStyle
                                 { label = text "Delete", onPress = Just (Delete index) }
+                            , text todo
                             ]
                     )
                     model.todos
