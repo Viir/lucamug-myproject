@@ -48,6 +48,8 @@ Ellie: https://ellie-app.com/
 
 # To start elm-go:
 
+Basic
+
 ```
 elm-go src/Main.elm
 ```
@@ -56,6 +58,12 @@ With debugger
 
 ```
 elm-go src/Main.elm -- --debug
+```
+
+With debugger, hot reload and index.html
+
+```
+elm-go src/Main.elm --dir=docs --hot -- --output=docs/elm.js --debug
 ```
 
 
