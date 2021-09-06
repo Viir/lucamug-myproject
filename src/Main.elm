@@ -1,6 +1,7 @@
 port module Main exposing (..)
 
 import Browser
+import Browser.Events
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -16,7 +17,7 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = \_ -> Browser.Events.onResize OnResize
         }
 
 
@@ -30,6 +31,7 @@ init flags =
         { counter = 0
         , todos = [ "Todo 1", "Todo 2" ]
         , inputFieldValue = ""
+        , viewport = 800
         }
         flags
     , Cmd.none
@@ -40,6 +42,7 @@ type alias Model =
     { counter : Int
     , todos : List String
     , inputFieldValue : String
+    , viewport : Int
     }
 
 
@@ -49,6 +52,7 @@ type Msg
     | OnChange String
     | Add
     | Delete Int
+    | OnResize Int Int
 
 
 type Maybe2 a
@@ -85,6 +89,9 @@ update msg model =
 
                 Delete position ->
                     ( { model | todos = removeAt position model.todos }, Cmd.none )
+
+                OnResize x y ->
+                    ( { model | viewport = x }, Cmd.none )
     in
     ( newModel, Cmd.batch [ cmds, setStorage newModel ] )
 
@@ -134,7 +141,14 @@ view model =
     layout [] <|
         column
             [ centerX, centerY, spacing 20 ]
-            [ row [ spacing 10 ]
+            [ text <| String.fromInt <| model.viewport
+            , (if model.viewport < 400 then
+                column
+
+               else
+                row
+              )
+                [ spacing 10 ]
                 [ Input.text [ onEnter <| Add ]
                     { label = Input.labelLeft [] <| text "Todo"
                     , onChange = OnChange
