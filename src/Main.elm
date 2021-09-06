@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
 import Element exposing (..)
@@ -10,13 +10,30 @@ import Html.Events
 import Json.Decode
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
-    Browser.sandbox
-        { init = { counter = 0, todos = [ "Todo 1", "Todo 2" ], inputFieldValue = "" }
+    Browser.element
+        { init = init
         , view = view
         , update = update
+        , subscriptions = \_ -> Sub.none
         }
+
+
+type alias Flags =
+    Maybe Model
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( Maybe.withDefault
+        { counter = 0
+        , todos = [ "Todo 1", "Todo 2" ]
+        , inputFieldValue = ""
+        }
+        flags
+    , Cmd.none
+    )
 
 
 type alias Model =
@@ -44,26 +61,32 @@ email =
     "a@a.com"
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        Increase value ->
-            { model | counter = model.counter + value }
+    let
+        ( newModel, cmds ) =
+            case msg of
+                Increase value ->
+                    ( { model | counter = model.counter + value }, Cmd.none )
 
-        Decrease ->
-            { model | counter = model.counter - 1 }
+                Decrease ->
+                    ( { model | counter = model.counter - 1 }, Cmd.none )
 
-        OnChange string ->
-            { model | inputFieldValue = string }
+                OnChange string ->
+                    ( { model | inputFieldValue = string }, Cmd.none )
 
-        Add ->
-            { model
-                | todos = model.inputFieldValue :: model.todos
-                , inputFieldValue = ""
-            }
+                Add ->
+                    ( { model
+                        | todos = model.inputFieldValue :: model.todos
+                        , inputFieldValue = ""
+                      }
+                    , Cmd.none
+                    )
 
-        Delete position ->
-            { model | todos = removeAt position model.todos }
+                Delete position ->
+                    ( { model | todos = removeAt position model.todos }, Cmd.none )
+    in
+    ( newModel, Cmd.batch [ cmds, setStorage newModel ] )
 
 
 removeAt : Int -> List a -> List a
@@ -142,11 +165,4 @@ view model =
             ]
 
 
-
--- div [ class "content" ]
---     [ input [] []
---     , node "style" [] [ text ".content {margin: 40px}" ]
---     , button [ Html.Events.onClick (Increase 20) ] [ text "Increase" ]
---     , p [] [ text (String.fromInt model.counter) ]
---     , button [ Html.Events.onClick Decrease ] [ text "Decrease" ]
---     ]
+port setStorage : Model -> Cmd msg

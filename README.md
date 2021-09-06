@@ -108,3 +108,33 @@ removeAt index l =
             _ :: rest ->
                 List.take index l ++ rest
 ```
+
+# HTML template
+
+```
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name='viewport' content='width=device-width,initial-scale=1,shrink-to-fit=no'>
+    <title>My Project</title>
+</head>
+
+<body>
+    <div id='elm'></div>
+    <script src='elm.js'></script>
+    <script>
+        var storedState = localStorage.getItem('elm');
+        var startingState = storedState ? JSON.parse(storedState) : null;
+        var app = Elm.Main.init({
+            node: document.getElementById('elm'),
+            flags: startingState
+        })
+        app.ports.setStorage.subscribe(function(state) {
+            localStorage.setItem('elm', JSON.stringify(state));
+        });
+    </script>
+</body>
+
+</html>
+```
