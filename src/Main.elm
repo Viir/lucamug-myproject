@@ -2,6 +2,7 @@ port module Main exposing (..)
 
 import Browser
 import Browser.Events
+import Codec
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -17,23 +18,31 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Browser.Events.onResize OnResize
+        , subscriptions = subscriptions
         }
 
 
 type alias Flags =
-    Maybe Model
+    String
+
+
+subscriptions : a -> Sub Msg
+subscriptions _ =
+    Sub.batch
+        [ Browser.Events.onResize OnResize
+        , getStorage GetStorage
+        ]
 
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( Maybe.withDefault
+    ( Result.withDefault
         { counter = 0
         , todos = [ "Todo 1", "Todo 2" ]
         , inputFieldValue = ""
         , viewport = 800
         }
-        flags
+        (Codec.decodeString codecModel flags)
     , Cmd.none
     )
 
@@ -46,6 +55,16 @@ type alias Model =
     }
 
 
+codecModel : Codec.Codec Model
+codecModel =
+    Codec.object Model
+        |> Codec.field "counter" .counter Codec.int
+        |> Codec.field "todos" .todos (Codec.list Codec.string)
+        |> Codec.field "inputFieldValue" .inputFieldValue Codec.string
+        |> Codec.field "viewport" .viewport Codec.int
+        |> Codec.buildObject
+
+
 type Msg
     = Increase Int
     | Decrease
@@ -53,16 +72,7 @@ type Msg
     | Add
     | Delete Int
     | OnResize Int Int
-
-
-type Maybe2 a
-    = Just2 a
-    | Nothing2
-
-
-email : String
-email =
-    "a@a.com"
+    | GetStorage String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -92,8 +102,23 @@ update msg model =
 
                 OnResize x y ->
                     ( { model | viewport = x }, Cmd.none )
+
+                GetStorage storage ->
+                    ( Result.withDefault model (Codec.decodeString codecModel storage)
+                    , Cmd.none
+                    )
     in
-    ( newModel, Cmd.batch [ cmds, setStorage newModel ] )
+    case msg of
+        GetStorage string ->
+            ( newModel, cmds )
+
+        _ ->
+            ( newModel
+            , Cmd.batch
+                [ cmds
+                , setStorage (Codec.encodeToString 0 codecModel newModel)
+                ]
+            )
 
 
 removeAt : Int -> List a -> List a
@@ -179,4 +204,7 @@ view model =
             ]
 
 
-port setStorage : Model -> Cmd msg
+port setStorage : String -> Cmd msg
+
+
+port getStorage : (String -> msg) -> Sub msg

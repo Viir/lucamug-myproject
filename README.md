@@ -39,9 +39,9 @@ npm install -g elm-formatter
 
 You can use your favorite IDE with an Elm plugin:
 
-VSCode: https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode
-IntelliJ: https://plugins.jetbrains.com/plugin/10268-elm
-Atom: https://atom.io/packages/elmjutsu
+* VSCode: https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode
+* IntelliJ: https://plugins.jetbrains.com/plugin/10268-elm
+* Atom: https://atom.io/packages/elmjutsu
 
 Alternative packages repository: https://elm.dmy.fr/
 Ellie: https://ellie-app.com/
@@ -66,8 +66,28 @@ With debugger, hot reload and index.html
 elm-go src/Main.elm --dir=docs --hot -- --output=docs/elm.js --debug
 ```
 
+# Useful snippets
 
-# On enter
+## Remove at
+
+From https://github.com/elm-community/list-extra/blob/8.4.0/src/List/Extra.elm#L920
+
+```
+removeAt : Int -> List a -> List a
+removeAt index l =
+    if index < 0 then
+        l
+
+    else
+        case List.drop index l of
+            [] ->
+                l
+
+            _ :: rest ->
+                List.take index l ++ rest
+```
+
+## On enter
 
 https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/Element-Input#form-elements
 https://ellie-app.com/5X6jBKtxzdpa1
@@ -90,26 +110,7 @@ onEnter msg =
         )
 ```
 
-# Remove at
-
-From https://github.com/elm-community/list-extra/blob/8.4.0/src/List/Extra.elm#L920
-
-```
-removeAt : Int -> List a -> List a
-removeAt index l =
-    if index < 0 then
-        l
-
-    else
-        case List.drop index l of
-            [] ->
-                l
-
-            _ :: rest ->
-                List.take index l ++ rest
-```
-
-# HTML template
+## HTML template
 
 ```
 <!DOCTYPE html>
@@ -137,4 +138,88 @@ removeAt index l =
 </body>
 
 </html>
+```
+
+using
+
+```
+type alias Flags =
+    Maybe Model
+
+
+port setStorage : Model -> Cmd msg
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( Maybe.withDefault
+        { counter = 0
+        , todos = [ "Todo 1", "Todo 2" ]
+        , inputFieldValue = ""
+        , viewport = 800
+        }
+        flags
+    , Cmd.none
+    )
+```
+
+## JavaScript with Codec
+
+```
+var storedState = localStorage.getItem('elm');
+var startingState = storedState ? JSON.parse(storedState) : null;
+var app = Elm.Main.init({
+    node: document.getElementById('elm'),
+    flags: String(startingState)
+})
+app.ports.setStorage.subscribe(function(state) {
+    localStorage.setItem('elm', JSON.stringify(state));
+});
+window.onstorage = function(event) {
+    if (event.key === 'elm') {
+        app.ports.getStorage.send(String(JSON.parse(event.newValue)));
+    }
+};
+```
+
+using
+
+```
+type alias Flags =
+    String
+
+
+port setStorage : String -> Cmd msg
+
+
+port getStorage : (String -> msg) -> Sub msg
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( Result.withDefault
+        { counter = 0
+        , todos = [ "Todo 1", "Todo 2" ]
+        , inputFieldValue = ""
+        , viewport = 800
+        }
+        (Codec.decodeString codecModel flags)
+    , Cmd.none
+    )
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    ...
+    case msg of
+        GetStorage string ->
+            ( newModel, cmds )
+
+        _ ->
+            ( newModel
+            , Cmd.batch
+                [ cmds
+                , setStorage (Codec.encodeToString 0 codecModel newModel)
+                ]
+            )
 ```
