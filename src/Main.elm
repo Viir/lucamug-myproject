@@ -1,26 +1,63 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Events
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Input as Input
 import Html
+import Html.Events
+import Json.Decode
 
 
-main : Program () Model Msg
+
+-- sandbox :
+--     { init : model
+--     , view : model -> Html msg
+--     , update : msg -> model -> model
+--     }
+--
+-- element :
+--     { init : flags -> ( model, Cmd msg )
+--     , view : model -> Html msg
+--     , update : msg -> model -> ( model, Cmd msg )
+--     , subscriptions : model -> Sub msg
+--     }
+
+
+main : Program Flags Model Msg
 main =
-    Browser.sandbox
-        { init = { counter = 0, todos = [ "Todo 1", "Todo 2" ], inputFieldValue = "" }
+    Browser.element
+        { init = init
         , view = view
         , update = update
+
+        -- (Int -> Int -> msg)
+        , subscriptions = \model -> Browser.Events.onResize OnResize
         }
+
+
+init : Flags -> ( Model, Cmd msg )
+init flags =
+    ( { counter = 0
+      , todos = [ "Todo 1", "Todo 2" ]
+      , inputFieldValue = ""
+      , width = flags.initialWidth
+      }
+    , Cmd.none
+    )
+
+
+type alias Flags =
+    { initialWidth : Int }
 
 
 type alias Model =
     { counter : Int
     , todos : List String
     , inputFieldValue : String
+    , width : Int
     }
 
 
@@ -30,6 +67,7 @@ type Msg
     | OnChange String
     | Add
     | Delete Int
+    | OnResize Int Int
 
 
 type Maybe2 a
@@ -42,23 +80,62 @@ email =
     "a@a.com"
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Increase value ->
-            { model | counter = model.counter + value }
+            ( { model | counter = model.counter + value }, Cmd.none )
 
         Decrease ->
-            { model | counter = model.counter - 1 }
+            ( { model | counter = model.counter - 1 }, Cmd.none )
 
         OnChange string ->
-            { model | inputFieldValue = string }
+            ( { model | inputFieldValue = string }, Cmd.none )
 
         Add ->
-            { model | todos = model.inputFieldValue :: model.todos }
+            ( { model
+                | todos = model.inputFieldValue :: model.todos
+                , inputFieldValue = ""
+              }
+            , Cmd.none
+            )
 
         Delete position ->
-            { model | todos = model.todos }
+            ( { model | todos = removeAt position model.todos }, Cmd.none )
+
+        OnResize width height ->
+            ( { model | width = width }, Cmd.none )
+
+
+removeAt : Int -> List a -> List a
+removeAt index l =
+    if index < 0 then
+        l
+
+    else
+        case List.drop index l of
+            [] ->
+                l
+
+            _ :: rest ->
+                List.take index l ++ rest
+
+
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+    htmlAttribute
+        (Html.Events.on "keyup"
+            (Json.Decode.field "key" Json.Decode.string
+                |> Json.Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Json.Decode.succeed msg
+
+                        else
+                            Json.Decode.fail "Not the enter key"
+                    )
+            )
+        )
 
 
 buttonStyle : List (Attribute msg)
@@ -75,16 +152,13 @@ view model =
     layout [] <|
         column
             [ centerX, centerY, spacing 20 ]
-            [ row [ spacing 10 ]
-                [ Input.text []
-                    { label = Input.labelLeft [] <| text "Todo"
-                    , onChange = OnChange
-                    , placeholder = Nothing
-                    , text = model.inputFieldValue
-                    }
-                , Input.button buttonStyle
-                    { label = text "Add", onPress = Just Add }
-                ]
+            [ text <| String.fromInt model.width
+            , Input.text [ onEnter Add ]
+                { label = Input.labelLeft [] <| text "Todo"
+                , onChange = OnChange
+                , placeholder = Nothing
+                , text = model.inputFieldValue
+                }
             , column [ spacing 10 ]
                 (List.indexedMap
                     (\index todo ->
@@ -96,7 +170,13 @@ view model =
                     )
                     model.todos
                 )
-            , row [ spacing 10 ]
+            , (if model.width < 600 then
+                column
+
+               else
+                row
+              )
+                [ spacing 10 ]
                 [ Input.button buttonStyle { label = text "+10", onPress = Just (Increase 10) }
                 , Input.button buttonStyle
                     { label = text "+3", onPress = Just (Increase 3) }
